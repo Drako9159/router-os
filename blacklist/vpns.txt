@@ -1,4 +1,4 @@
-0.0.0.0 youtube.com
-0.0.0.0 www.youtube.com
-0.0.0.0 api.protonvpn.ch
-0.0.0.0 secure.protonvpn.com
+127.0.0.1 youtube.com
+127.0.0.1 www.youtube.com
+127.0.0.1 api.protonvpn.ch
+127.0.0.1 secure.protonvpn.com
