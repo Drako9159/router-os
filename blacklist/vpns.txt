@@ -2,6 +2,7 @@
 api.protonvpn.ch
 secure.protonvpn.com
 protonvpn.com
+185.165.240.23
 
 # Dominios de NordVPN (Por si acaso)
 api.nordvpn.com
