@@ -4,5 +4,7 @@ secure.protonvpn.com
 protonvpn.com
 185.165.240.23
 
+youtube.com
+
 # Dominios de NordVPN (Por si acaso)
 api.nordvpn.com
