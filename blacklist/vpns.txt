@@ -1,12 +1,4 @@
-# Dominios de servidores y APIs de ProtonVPN
-api.protonvpn.ch
-secure.protonvpn.com
-protonvpn.com
-185.165.240.23
-
-youtube.com
-www.youtube.comm
-m.youtube.com
-
-# Dominios de NordVPN (Por si acaso)
-api.nordvpn.com
+0.0.0.0 youtube.com
+0.0.0.0 www.youtube.com
+0.0.0.0 api.protonvpn.ch
+0.0.0.0 secure.protonvpn.com
