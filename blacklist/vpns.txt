@@ -1,1 +1,7 @@
-185.168.240.23.88/32
+# Dominios de servidores y APIs de ProtonVPN
+api.protonvpn.ch
+secure.protonvpn.com
+protonvpn.com
+
+# Dominios de NordVPN (Por si acaso)
+api.nordvpn.com
