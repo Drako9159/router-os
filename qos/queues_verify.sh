@@ -52,3 +52,19 @@ add name=limite-dispositivo-download \
     parent=bridge \
     packet-mark=dispositivo-limite \
     max-limit=20M
+
+
+
+
+
+
+/queue type
+add kind=cake name=cake-upload cake-bandwidth=XXM \
+    cake-diffserv=diffserv4 \
+    cake-flowmode=dual-srchost \
+    cake-nat=yes
+
+add kind=cake name=cake-download cake-bandwidth=YYM \
+    cake-diffserv=besteffort \
+    cake-flowmode=dual-dsthost \
+    cake-nat=yes
