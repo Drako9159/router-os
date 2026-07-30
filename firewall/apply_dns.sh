@@ -115,3 +115,100 @@
 /ip firewall filter add chain=forward action=reject reject-with=tcp-reset \
     protocol=tcp src-address-list=agfamily dst-address-list=doh-servers \
     comment="Block DNS over HTTPS (DoH) for AdGuard Family group"
+
+
+# 1. Definir la lista de servidores DoH/DoT comunes (IPs y FQDNs dinámicos)
+/ip firewall address-list
+# Cloudflare DNS
+add list=doh-servers address=1.1.1.1 comment="Cloudflare Primary"
+add list=doh-servers address=1.0.0.1 comment="Cloudflare Secondary"
+add list=doh-servers address=1.1.1.2 comment="Cloudflare Security Primary"
+add list=doh-servers address=1.0.0.2 comment="Cloudflare Security Secondary"
+add list=doh-servers address=1.1.1.3 comment="Cloudflare Family Primary"
+add list=doh-servers address=1.0.0.3 comment="Cloudflare Family Secondary"
+add list=doh-servers address=cloudflare-dns.com comment="Cloudflare DoH Domain"
+add list=doh-servers address=dns.cloudflare.com comment="Cloudflare DoH Domain"
+
+# Google DNS
+add list=doh-servers address=8.8.8.8 comment="Google Primary"
+add list=doh-servers address=8.8.4.4 comment="Google Secondary"
+add list=doh-servers address=dns.google comment="Google DoH Domain"
+
+# Quad9
+add list=doh-servers address=9.9.9.9 comment="Quad9 Secure Primary"
+add list=doh-servers address=149.112.112.112 comment="Quad9 Secure Secondary"
+add list=doh-servers address=dns.quad9.net comment="Quad9 DoH Domain"
+
+# AdGuard Family & Standard DNS
+add list=doh-servers address=94.140.14.14 comment="AdGuard Default Primary"
+add list=doh-servers address=94.140.15.15 comment="AdGuard Default Secondary"
+add list=doh-servers address=94.140.14.15 comment="AdGuard Family Primary"
+add list=doh-servers address=94.140.15.16 comment="AdGuard Family Secondary"
+add list=doh-servers address=dns.adguard-dns.com comment="AdGuard DoH Domain"
+
+# CleanBrowsing
+add list=doh-servers address=185.228.168.9 comment="CleanBrowsing Security Primary"
+add list=doh-servers address=185.228.169.9 comment="CleanBrowsing Security Secondary"
+add list=doh-servers address=185.228.168.168 comment="CleanBrowsing Family Primary"
+add list=doh-servers address=185.228.169.168 comment="CleanBrowsing Family Secondary"
+
+# 2. Bloqueo DoH (Puerto 443) para el grupo dnsfamily hacia la lista consolidada
+/ip firewall filter
+# Nota: El bloqueo de DoT general (puerto 853) para dnsfamily ya está activo arriba (líneas 31-33) sin restringir IP.
+# Esta regla de abajo refuerza el bloqueo de DoH (puerto 443) hacia la lista consolidada doh-servers.
+add chain=forward protocol=tcp dst-port=443 src-address-list=dnsfamily dst-address-list=doh-servers action=reject reject-with=tcp-reset comment="Block DoH to public resolvers for dnsfamily"
+
+
+# ==============================================================================
+# BLOQUEO DE VPNS IDENTIFICADAS
+# ==============================================================================
+
+# 1. Lista de IPs/Dominios de VPNs bloqueadas
+/ip firewall address-list
+add list=blocked-vpns address=95.173.217.225
+
+# 2. Descartar todo el tráfico hacia las VPNs para el grupo dnsfamily
+/ip firewall filter
+add chain=forward action=drop src-address-list=dnsfamily dst-address-list=blocked-vpns \
+    comment="Block identified VPNs for dnsfamily"
+
+# ==============================================================================
+# BLOQUEO DE PUERTOS DE VPN WARP
+# ==============================================================================
+/ip firewall filter
+add chain=forward src-address-list=dnsfamily protocol=udp dst-port=2408,500,1701,4500 action=drop comment="Bloqueo de puertos VPN WARP para dnsfamily"
+
+# ==============================================================================
+# BLOQUEO DE TIKTOK POR RAW
+# ==============================================================================
+
+/ip firewall raw
+add chain=prerouting src-address-list=dnsfamily protocol=tcp dst-port=443 tls-host="*tiktokv.com" action=add-dst-to-address-list address-list=tiktok-ips address-list-timeout=7d comment="Capturar IPs de TikTok para dnsfamily"
+add chain=prerouting src-address-list=dnsfamily dst-address-list=tiktok-ips action=drop comment="Bloquear IPs de TikTok para dnsfamily"
+
+/ip firewall raw
+add chain=prerouting src-address-list=dnsfamily protocol=tcp dst-port=443 tls-host="*protonvpn*" action=add-dst-to-address-list address-list=blocked-vpns address-list-timeout=7d comment="Capturar IPs de ProtonVPN para dnsfamily"
+add chain=prerouting src-address-list=dnsfamily protocol=tcp dst-port=443 tls-host="*proton.me*" action=add-dst-to-address-list address-list=blocked-vpns address-list-timeout=7d comment="Capturar API Proton para dnsfamily"
+
+# ==============================================================================
+# CAPTURA DE DOMINIOS DE VPNs Y SERVICIOS DE PROXY
+# ==============================================================================
+
+/ip dns static
+add name="protonvpn.net" match-subdomain=yes type=FWD address-list=blocked-vpns comment="Capturar todos los nodos .net"
+
+# ==============================================================================
+# MAS BLOQUEO DE REDES SOCIALES (FACEBOOK, INSTAGRAM, TIKTOK)
+# ==============================================================================
+
+/ip firewall raw
+# Facebook & Instagram CDN
+add action=add-dst-to-address-list address-list=Bloqueo_Redes address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*facebook.com
+add action=add-dst-to-address-list address-list=Bloqueo_Redes address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*fbcdn.net
+add action=add-dst-to-address-list address-list=Bloqueo_Redes address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*instagram.com
+
+# TikTok y servidores de contenido (ByteDance)
+add action=add-dst-to-address-list address-list=Bloqueo_Redes address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*tiktok.com
+add action=add-dst-to-address-list address-list=Bloqueo_Redes address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*tiktokcdn.com
+add action=add-dst-to-address-list address-list=Bloqueo_Redes address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*byteoversea.com
+add action=add-dst-to-address-list address-list=Bloqueo_Redes address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*ibytedtos.com
