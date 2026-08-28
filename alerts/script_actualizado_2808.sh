@@ -1,4 +1,4 @@
-############### Alerta Telegram v4 (Multi-Lista Firewall) via JSON POST (v7.x) — DHCP Lease Bound ###############
+############### Alerta Telegram v5 (Multi-Lista con Detalle de Políticas) via JSON POST (v7.x) — DHCP Lease Bound ###############
 :local botToken "x"
 :local chatId "x"
 
@@ -53,20 +53,35 @@
         } on-error={}
     }
     
+    # Obtener todas las Address Lists activas del firewall para esta IP
+    :local activeLists ""
+    :foreach listEntry in=[/ip firewall address-list find where address=$leaseIp] do={
+        :local listName [/ip firewall address-list get $listEntry list]
+        :if ([:len $activeLists] = 0) do={
+            :set activeLists $listName
+        } else={
+            :set activeLists ($activeLists . ", " . $listName)
+        }
+    }
+    
     # Sanitizar campos dinámicos
     :local cleanHost [$sanitize $hostName]
     :local cleanComment [$sanitize $leaseComment]
     :local cleanServer [$sanitize $serverName]
+    :local cleanLists "Ninguna"
+    :if ([:len $activeLists] > 0) do={
+        :set cleanLists [$sanitize $activeLists]
+    }
     
-    # Comprobar pertenencia a Address-Lists en orden de prioridad
+    # Comprobar pertenencia a Address-Lists específicas para definir prioridad del color de alerta
     :local isLimited false
     :local isDnsFamily false
     
-    :if ([:len [/ip firewall address-list find where list="limit32kb" address=$leaseIp]] > 0) do={
+    :if ([:len [/ip firewall address-list find where list="LMT-32KB" address=$leaseIp]] > 0) do={
         :set isLimited true
     }
     
-    :if ([:len [/ip firewall address-list find where list="dnsfamily" address=$leaseIp]] > 0) do={
+    :if ([:len [/ip firewall address-list find where list="DNS-FAMILY" address=$leaseIp]] > 0) do={
         :set isDnsFamily true
     }
     
@@ -77,10 +92,10 @@
     # Definir la cabecera del mensaje según prioridad de estados
     :local header "🟢 <b>DISPOSITIVO REGISTRADO</b>"
     :if ($isLimited) do={
-        :set header "🔴 <b>ACCESO LIMITADO (limit32kb)</b>"
+        :set header "🔴 <b>ACCESO LIMITADO (LMT-32KB)</b>"
     } else={
         :if ($isDnsFamily) do={
-            :set header "🔵 <b>FILTRO FAMILIAR (dnsfamily)</b>"
+            :set header "🔵 <b>FILTRO FAMILIAR (DNS-FAMILY)</b>"
         } else={
             :if ($leaseType = "Dinamico") do={
                 :set header "🟡 <b>NUEVA CONEXIÓN (DINÁMICO)</b>"
@@ -88,8 +103,8 @@
         }
     }
     
-    # Construir el mensaje formateado en HTML para el JSON
-    :local mensaje "$header\\n───────────────────\\n👤 <b>Alias:</b> $cleanComment\\n💻 <b>Host:</b> $cleanHost\\n🌐 <b>IP:</b> <code>$leaseIp</code>\\n🔍 <b>MAC:</b> <code>$leaseMac</code>\\n📡 <b>Red/Servidor:</b> $cleanServer\\n📅 <b>Fecha:</b> $date $time\\n───────────────────"
+    # Construir el mensaje formateado en HTML para el JSON (incluyendo las listas dinámicas encontradas)
+    :local mensaje "$header\\n───────────────────\\n👤 <b>Alias:</b> $cleanComment\\n💻 <b>Host:</b> $cleanHost\\n🌐 <b>IP:</b> <code>$leaseIp</code>\\n🔍 <b>MAC:</b> <code>$leaseMac</code>\\n📡 <b>Red/Servidor:</b> $cleanServer\\n🛡️ <b>Listas Activas:</b> $cleanLists\\n📅 <b>Fecha:</b> $date $time\\n───────────────────"
     
     # Armar el payload JSON
     :local payload "{\"chat_id\":\"$chatId\",\"parse_mode\":\"HTML\",\"text\":\"$mensaje\"}"

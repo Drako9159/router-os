@@ -46,23 +46,12 @@ add max-limit=249M name=cake-download packet-mark=no-mark parent=bridge queue=ca
 
 
 
-
-
-
-
-
-
-
-
-
-
 /queue type
 add cake-flowmode=dual-srchost cake-nat=yes kind=cake name=cake-upload-ips1
 add cake-flowmode=dual-dsthost cake-nat=yes kind=cake name=cake-download-ips1
 /queue tree
 add bucket-size=0.01 max-limit=300M name=download packet-mark=no-mark parent=bridge queue=cake-download-ips1
 add bucket-size=0.01 max-limit=300M name=upload packet-mark=no-mark parent=ether1-wan queue=cake-upload-ips1
-
 
 
 
@@ -106,7 +95,6 @@ add bucket-size=0.01 max-limit=300M name=upload packet-mark=no-mark parent=ether
 
 
 
-
 # Foro mikrotik Jun 2025
 /interface list
 add name=local
@@ -117,8 +105,6 @@ add interface=vlan102 list=local
 add action=mark-packet chain=forward comment=inter-vlan in-interface-list=local new-packet-mark=intervlan out-interface-list=local passthrough=no
 /ip firewall filter
 add action=fasttrack-connection chain=forward comment="fasttrack for established,related" connection-state=established,related hw-offload=yes packet-mark=no-mark
-
-
 
 
 # Foro mikroik Jan 2024
@@ -140,8 +126,6 @@ add action=fasttrack-connection chain=forward comment="fasttrack for established
     add bucket-size=0.001/0.001 disabled=yes name=CAKE_SHAPE queue=CAKE_DL/CAKE_UL target=pppoe-ADSL
 
 
-
-
 # Foro reddit, no recomendado
 /queue type
 add name=cake-up kind=cake cake-bandwidth=900M cake-diffserv=diffserv4 cake-nat=yes cake-rtt-scheme=internet
@@ -153,10 +137,6 @@ set ether1 queue=cake-up
 # LAN
 set ether2 queue=cake-dn
 set ether3 queue=cake-dn
-
-
-
-
 
 
 
