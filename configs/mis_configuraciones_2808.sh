@@ -15,9 +15,25 @@ add add-arp=yes add-dns-entries=yes address-pool=default-dhcp interface=\
 set allow-remote-requests=yes cache-size=10480KiB servers=\
     8.8.8.8,1.1.1.1,9.9.9.9 use-doh-server=\
     https://dns.cloudflare.com/dns-query verify-doh-cert=yes
+
+
 ### My default DoH
 ### https://dns.cloudflare.com/dns-query
 ### https://dns.google/dns-query
+
+### Cloudflare (Estándar) https://cloudflare-dns.com/dns-query
+### Cloudflare (Seguridad) https://security.cloudflare-dns.com/dns-query
+### Google (Estándar) https://dns.google/dns-query
+### Quad (Privadidad) https://dns.quad9.net/dns-query
+### Adguard (Adblock) https://dns.adguard-dns.com/dns-query
+### Mullvad (Adblock, Privacidad) https://adblock.doh.mullvad.net/dns-query
+### ControlD (Adblock, Malware) https://freedns.controld.com/p2
+### NextDNS (Personalizado) https://dns.nextdns.io/ID-DE-TU-PERFIL
+
+### Cambios en DoH configuraciones
+### DoH Max Server Connections de 5 a 20
+### DoH Max Concurrent Queries de 50 a 100
+### DoH Timeout de 5.000 a 10.000
 
 
 # Algunos servidores agregados para mejorar la resolución de nombres de dominio y proporcionar redundancia en caso de que un servidor falle.
