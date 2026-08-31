@@ -3,12 +3,12 @@
 
 # 1. Crear la interfaz WireGuard
 /interface wireguard
-add name=wg-cloudflare private-key="x" \
+add name=wg-cloudflare private-key="0A0fKdUVodm4HP9hSbnMxYgHXV/jG8XvdCu9teZYWEE=" \
     comment="Cloudflare WARP Interface" mtu=1280 listen-port=13231
 
 # 2. Configurar el Peer
 /interface wireguard peers
-add interface=wg-cloudflare public-key="x" \
+add interface=wg-cloudflare public-key="bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=" \
     comment="Cloudflare WARP Peer" endpoint-address=162.159.193.10 endpoint-port=2408 allowed-address=0.0.0.0/0 persistent-keepalive=25s
 
 # 3. Asignar la IP a la interfaz
@@ -28,7 +28,7 @@ add dst-address=0.0.0.0/0 gateway=wg-cloudflare routing-table=via-cloudflare \
 # 6. Hacer NAT para salir por la VPN (Subirla a posición 0 para que sea la primera regla)
 /ip firewall nat
 add chain=srcnat out-interface=wg-cloudflare action=masquerade \
-    comment="NAT Cloudflare"
+    comment="NAT Cloudflare" place-before=0
 
 # 7. Crear Address List de Redes Locales (RFC1918)
 /ip firewall address-list
@@ -42,6 +42,14 @@ add list=wgaddress-local address=172.16.0.0/12
 add chain=prerouting src-address-list=WG-CLOUDFLARE dst-address-list=!wgaddress-local \
     action=mark-routing new-routing-mark=via-cloudflare passthrough=no \
     comment="Enviar a la VPN (excluyendo red local)"
+
+# 9. Bypass FastTrack para el tráfico de la VPN
+# Esto es necesario para que el tráfico de la VPN pueda ser controlado por las colas
+/ip firewall filter
+add action=accept chain=forward comment="BYPASS FASTTRACKING WGCLOUDFLARE" \
+    src-address-list=WG-CLOUDFLARE place-before=[find where action=fasttrack-connection]
+add action=accept chain=forward comment="BYPASS FASTTRACKING WG-CLOUDFLARE" \
+    dst-address-list=WG-CLOUDFLARE place-before=[find where action=fasttrack-connection]
 
 # /ip firewall filter
 # add action=accept chain=input comment="Permitir Wireguard" dst-port=13231 protocol=udp place-before=1
@@ -67,18 +75,3 @@ add chain=dstnat action=dst-nat to-addresses=1.1.1.1 to-ports=53 \
 add chain=dstnat action=dst-nat to-addresses=1.1.1.1 to-ports=53 \
     protocol=tcp src-address-list=WG-CLOUDFLARE dst-port=53 \
     comment="Force Cloudflare DNS (TCP)" place-before=0
-
-# /ip firewall raw
-# add action=add-dst-to-address-list address-list=wgaddress-local address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*twitch.tv comment="Capturar Twitch 1"
-# add action=add-dst-to-address-list address-list=wgaddress-local address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*ttvnw.net comment="Capturar Twitch 2"
-# add action=add-dst-to-address-list address-list=wgaddress-local address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*twitchcdn.net comment="Capturar Twitch 3"
-
-# /ip firewall raw
-# add action=add-dst-to-address-list address-list=wgaddress-local address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*usher.ttvnw.net comment="App Android Twitch - Playlists/Manifests"
-# add action=add-dst-to-address-list address-list=wgaddress-local address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*video-edge* comment="App Android Twitch - Edge Video Streams"
-# add action=add-dst-to-address-list address-list=wgaddress-local address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*jtvnw.net comment="App Android Twitch - Legacy CDN Services"
-# add action=add-dst-to-address-list address-list=wgaddress-local address-list-timeout=1d chain=prerouting dst-port=443 protocol=tcp tls-host=*ext-twitch.tv comment="App Android Twitch - Extensions/API"
-
-
-
-
