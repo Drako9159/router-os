@@ -24,7 +24,6 @@ add action=mark-packet chain=forward comment=LMT32KB-UPLOAD new-packet-mark=\
 add action=mark-packet chain=forward comment=LMT32KB-DOWNLOAD \
     dst-address-list=LMT-32KB new-packet-mark=LMT32KB-DOWNLOAD passthrough=no
 
-
 # 2. Cola de velocidad
 /queue tree
 add max-limit=32k name=LMT32KB-UPLOAD packet-mark=LMT32KB-UPLOAD parent=\
