@@ -3,12 +3,12 @@
 
 # 1. Crear la interfaz WireGuard
 /interface wireguard
-add name=wg-cloudflare private-key="0A0fKdUVodm4HP9hSbnMxYgHXV/jG8XvdCu9teZYWEE=" \
+add name=wg-cloudflare private-key="x" \
     comment="Cloudflare WARP Interface" mtu=1280 listen-port=13231
 
 # 2. Configurar el Peer
 /interface wireguard peers
-add interface=wg-cloudflare public-key="bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=" \
+add interface=wg-cloudflare public-key="x" \
     comment="Cloudflare WARP Peer" endpoint-address=162.159.193.10 endpoint-port=2408 allowed-address=0.0.0.0/0 persistent-keepalive=25s
 
 # 3. Asignar la IP a la interfaz
