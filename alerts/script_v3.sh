@@ -1,5 +1,5 @@
-############### Alerta Telegram v5 (Multi-Lista con Detalle de Políticas) via JSON POST (v7.x) — DHCP Lease Bound ###############
-:local botToken "x"
+############### Alerta Telegram v5.1 (Optimizado sin bloqueos) via JSON POST (v7.x) — DHCP Lease Bound ###############
+:local botToken "TU_NUEVO_TOKEN_AQUI"
 :local chatId "x"
 
 # Función para sanitizar texto para JSON e HTML
@@ -21,37 +21,28 @@
     :local leaseMac $"leaseActMAC"
     :local leaseIp $"leaseActIP"
     
-    # Obtener el nombre del host de forma segura
-    :local hostName "Desconocido"
-    :do {
-        :set hostName [/ip dhcp-server lease get [find where active-mac-address=$leaseMac active-address=$leaseIp] host-name]
-    } on-error={:set hostName "Desconocido"}
-    
-    # Obtener el comentario/alias de forma segura
+    :local hostName "Sin-Nombre"
     :local leaseComment "Sin-Comentario"
-    :do {
-        :set leaseComment [/ip dhcp-server lease get [find where active-mac-address=$leaseMac active-address=$leaseIp] comment]
-    } on-error={:set leaseComment "Sin-Comentario"}
-    
-    # Valores por defecto si vienen vacíos
-    :if ([:len $hostName] = 0) do={:set hostName "Sin-Nombre"}
-    :if ([:len $leaseComment] = 0) do={:set leaseComment "Sin-Comentario"}
-    
-    # Buscar el ID del lease para obtener detalles del tipo y servidor DHCP
-    :local leaseId [/ip dhcp-server lease find where active-mac-address=$leaseMac active-address=$leaseIp]
     :local leaseType "Dinamico"
     :local serverName "Desconocido"
+    :local leaseCfgLists ""
+    
+    # 1 sola búsqueda en la tabla DHCP para extraer todos los datos rápido
+    :local leaseId [/ip dhcp-server lease find where active-mac-address=$leaseMac active-address=$leaseIp]
     
     :if ([:len $leaseId] > 0) do={
-        # Determinar si es estático (registrado/fijo) o dinámico
+        :do { :set hostName [/ip dhcp-server lease get $leaseId host-name] } on-error={}
+        :do { :set leaseComment [/ip dhcp-server lease get $leaseId comment] } on-error={}
+        :do { :set serverName [/ip dhcp-server lease get $leaseId server] } on-error={}
+        :do { :set leaseCfgLists [/ip dhcp-server lease get $leaseId address-lists] } on-error={}
+        
         :local isDynamic [/ip dhcp-server lease get $leaseId dynamic]
         :if (!$isDynamic) do={ :set leaseType "Estatico" }
-        
-        # Obtener el nombre del servidor DHCP asignado
-        :do {
-            :set serverName [/ip dhcp-server lease get $leaseId server]
-        } on-error={}
     }
+    
+    # Valores por defecto si vienen vacíos
+    :if ([:len $hostName] = 0) do={ :set hostName "Sin-Nombre" }
+    :if ([:len $leaseComment] = 0) do={ :set leaseComment "Sin-Comentario" }
     
     # Obtener todas las Address Lists activas del firewall para esta IP
     :local activeLists ""
@@ -64,6 +55,11 @@
         }
     }
     
+    # Respaldo: Si el firewall aún no inyecta la lista dinámica por velocidad, usar la del Lease
+    :if (([:len $activeLists] = 0) && ([:len $leaseCfgLists] > 0)) do={
+        :set activeLists $leaseCfgLists
+    }
+    
     # Sanitizar campos dinámicos
     :local cleanHost [$sanitize $hostName]
     :local cleanComment [$sanitize $leaseComment]
@@ -74,16 +70,13 @@
     }
     
     # Comprobar pertenencia a Address-Lists específicas para definir prioridad del color de alerta
-    :local isLimited false
+    :local isLimited32k false
+    :local isLimitedMbps false
     :local isDnsFamily false
     
-    :if ([:len [/ip firewall address-list find where list="limit32kb" address=$leaseIp]] > 0) do={
-        :set isLimited true
-    }
-    
-    :if ([:len [/ip firewall address-list find where list="dnsfamily" address=$leaseIp]] > 0) do={
-        :set isDnsFamily true
-    }
+    :if ([:find $activeLists "LMT-32KB"] >= 0) do={ :set isLimited32k true }
+    :if (([:find $activeLists "LMT-2M"] >= 0) || ([:find $activeLists "LMT-4M"] >= 0)) do={ :set isLimitedMbps true }
+    :if ([:find $activeLists "DNS-1113"] >= 0) do={ :set isDnsFamily true }
     
     # Obtener fecha y hora
     :local date [/system clock get date]
@@ -91,41 +84,33 @@
     
     # Definir la cabecera del mensaje según prioridad de estados
     :local header "🟢 <b>DISPOSITIVO REGISTRADO</b>"
-    :if ($isLimited) do={
-        :set header "🔴 <b>ACCESO LIMITADO (limit32kb)</b>"
+    :if ($isLimited32k) do={
+        :set header "🔴 <b>ACCESO LIMITADO (LMT-32KB)</b>"
     } else={
-        :if ($isDnsFamily) do={
-            :set header "🔵 <b>FILTRO FAMILIAR (dnsfamily)</b>"
+        :if ($isLimitedMbps) do={
+            :set header "🟠 <b>VELOCIDAD LIMITADA (LMT-2M/4M)</b>"
         } else={
-            :if ($leaseType = "Dinamico") do={
-                :set header "🟡 <b>NUEVA CONEXIÓN (DINÁMICO)</b>"
+            :if ($isDnsFamily) do={
+                :set header "🔵 <b>FILTRO FAMILIAR (DNS-1113)</b>"
+            } else={
+                :if ($leaseType = "Dinamico") do={
+                    :set header "🟡 <b>NUEVA CONEXIÓN (DINÁMICO)</b>"
+                }
             }
         }
     }
     
-    # Construir el mensaje formateado en HTML para el JSON (incluyendo las listas dinámicas encontradas)
+    # Construir el mensaje formateado en HTML para el JSON
     :local mensaje "$header\\n───────────────────\\n👤 <b>Alias:</b> $cleanComment\\n💻 <b>Host:</b> $cleanHost\\n🌐 <b>IP:</b> <code>$leaseIp</code>\\n🔍 <b>MAC:</b> <code>$leaseMac</code>\\n📡 <b>Red/Servidor:</b> $cleanServer\\n🛡️ <b>Listas Activas:</b> $cleanLists\\n📅 <b>Fecha:</b> $date $time\\n───────────────────"
     
     # Armar el payload JSON
     :local payload "{\"chat_id\":\"$chatId\",\"parse_mode\":\"HTML\",\"text\":\"$mensaje\"}"
     
-    # Enviar con reintento (hasta 3 intentos) si falla usando la API de RouterOS v7.x
-    :local sent false
-    :local attempts 0
-    :while (!$sent && $attempts < 3) do={
-        :set attempts ($attempts + 1)
-        :do {
-            /tool fetch http-method=post http-header-field="Content-Type: application/json" http-data=$payload url="https://api.telegram.org/bot$botToken/sendMessage" keep-result=no check-certificate=no
-            :set sent true
-        } on-error={
-            :if ($attempts < 3) do={ :delay 3s }
-        }
-    }
-    
-    # Registrar en el log del sistema
-    :if ($sent) do={
+    # Envío directo (1 solo intento rápido para no congelar el servidor DHCP si no hay WAN)
+    :do {
+        /tool fetch http-method=post http-header-field="Content-Type: application/json" http-data=$payload url="https://api.telegram.org/bot$botToken/sendMessage" keep-result=no check-certificate=no
         :log info ("Telegram-Alert: Alerta enviada para $leaseIp ($leaseMac)")
-    } else={
-        :log error ("Telegram-Alert: Error al enviar alerta para $leaseIp tras $attempts intentos")
+    } on-error={
+        :log error ("Telegram-Alert: Error al enviar alerta para $leaseIp (Sin conexión a Telegram)")
     }
 }

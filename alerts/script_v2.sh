@@ -81,7 +81,7 @@
         :set isLimited true
     }
     
-    :if ([:len [/ip firewall address-list find where list="DNS-FAMILY" address=$leaseIp]] > 0) do={
+    :if ([:len [/ip firewall address-list find where list="DNS-1113" address=$leaseIp]] > 0) do={
         :set isDnsFamily true
     }
     
@@ -95,7 +95,7 @@
         :set header "🔴 <b>ACCESO LIMITADO (LMT-32KB)</b>"
     } else={
         :if ($isDnsFamily) do={
-            :set header "🔵 <b>FILTRO FAMILIAR (DNS-FAMILY)</b>"
+            :set header "🔵 <b>FILTRO FAMILIAR (DNS-1113)</b>"
         } else={
             :if ($leaseType = "Dinamico") do={
                 :set header "🟡 <b>NUEVA CONEXIÓN (DINÁMICO)</b>"
@@ -109,23 +109,11 @@
     # Armar el payload JSON
     :local payload "{\"chat_id\":\"$chatId\",\"parse_mode\":\"HTML\",\"text\":\"$mensaje\"}"
     
-    # Enviar con reintento (hasta 3 intentos) si falla usando la API de RouterOS v7.x
-    :local sent false
-    :local attempts 0
-    :while (!$sent && $attempts < 3) do={
-        :set attempts ($attempts + 1)
-        :do {
-            /tool fetch http-method=post http-header-field="Content-Type: application/json" http-data=$payload url="https://api.telegram.org/bot$botToken/sendMessage" keep-result=no check-certificate=no
-            :set sent true
-        } on-error={
-            :if ($attempts < 3) do={ :delay 3s }
-        }
-    }
-    
-    # Registrar en el log del sistema
-    :if ($sent) do={
+    # Envío directo (1 solo intento rápido para no congelar el servidor DHCP si no hay WAN)
+    :do {
+        /tool fetch http-method=post http-header-field="Content-Type: application/json" http-data=$payload url="https://api.telegram.org/bot$botToken/sendMessage" keep-result=no check-certificate=no
         :log info ("Telegram-Alert: Alerta enviada para $leaseIp ($leaseMac)")
-    } else={
-        :log error ("Telegram-Alert: Error al enviar alerta para $leaseIp tras $attempts intentos")
+    } on-error={
+        :log error ("Telegram-Alert: Error al enviar alerta para $leaseIp (Sin conexión a Telegram)")
     }
 }
