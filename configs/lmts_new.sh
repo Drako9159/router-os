@@ -75,9 +75,9 @@ add chain=lmt-2m-pkt \
 # 2. Cola de velocidad
 /queue tree
 add max-limit=2M name=LMT2M-UPLOAD packet-mark=LMT2M-UPLOAD parent=global \
-    queue=cake-padre-upload
+    queue=fq-codel
 add max-limit=2M name=LMT2M-DOWNLOAD packet-mark=LMT2M-DOWNLOAD parent=global \
-    queue=cake-padre-download
+    queue=fq-codel
 
 # 3. Bypass Fasttrack
 /ip firewall filter
@@ -113,9 +113,9 @@ add chain=lmt-5m-pkt \
 # 2. Cola de velocidad
 /queue tree
 add max-limit=5M name=LMT5M-UPLOAD packet-mark=LMT5M-UPLOAD parent=global \
-    queue=cake-padre-upload
+    queue=fq-codel
 add max-limit=5M name=LMT5M-DOWNLOAD packet-mark=LMT5M-DOWNLOAD parent=global \
-    queue=cake-padre-download
+    queue=fq-codel
 
 # 3. Bypass Fasttrack
 /ip firewall filter
@@ -150,9 +150,9 @@ add chain=lmt-4m-pkt \
 # 2. Cola de velocidad
 /queue tree
 add max-limit=4M name=LMT4M-UPLOAD packet-mark=LMT4M-UPLOAD parent=global \
-    queue=cake-padre-upload
+    queue=fq-codel
 add max-limit=4M name=LMT4M-DOWNLOAD packet-mark=LMT4M-DOWNLOAD parent=global \
-    queue=cake-padre-download
+    queue=fq-codel
 
 # 3. Bypass Fasttrack
 /ip firewall filter
@@ -187,9 +187,9 @@ add chain=lmt-1m-pkt \
 # 2. Cola de velocidad
 /queue tree
 add max-limit=1M name=LMT1M-UPLOAD packet-mark=LMT1M-UPLOAD parent=global \
-    queue=cake-padre-upload
+    queue=fq-codel
 add max-limit=1M name=LMT1M-DOWNLOAD packet-mark=LMT1M-DOWNLOAD parent=global \
-    queue=cake-padre-download
+    queue=fq-codel
 
 # 3. Bypass Fasttrack
 /ip firewall filter
