@@ -3,11 +3,11 @@
 
 # 1. Crear la interfaz WireGuard
 /interface wireguard
-add name=wg-proton-usfree35 private-key="x" comment="Proton VPN US-FREE-35" mtu=1280
+add name=wg-proton-usfree35 private-key="x" comment="Proton VPN US-FREE-35"
 
 # 2. Configurar el Peer
 /interface wireguard peers
-add interface=wg-proton-usfree35 public-key="x" comment="Proton VPN US-FREE-35 Peer" endpoint-address=149.102.254.91 endpoint-port=51820 allowed-address=0.0.0.0/0 persistent-keepalive=25s
+add interface=wg-proton-usfree35 public-key="x" comment="Proton VPN US-FREE-35 Peer" endpoint-address=149.102.224.33 endpoint-port=51820 allowed-address=0.0.0.0/0 persistent-keepalive=25s
 
 # 3. Asignar la IP a la interfaz
 /ip address
@@ -24,6 +24,9 @@ add dst-address=0.0.0.0/0 gateway=wg-proton-usfree35 routing-table=via-proton-us
 # 6. Hacer NAT para salir por la VPN (Subirla a posición 0 para que sea la primera regla)
 /ip firewall nat
 add chain=srcnat out-interface=wg-proton-usfree35 action=masquerade comment="NAT Proton VPN US-FREE-35"
+
+
+
 
 # 7. Crear Address List de Redes Locales (RFC1918)
 /ip firewall address-list
